@@ -1,82 +1,42 @@
 pipeline {
-
     agent any
-
-    environment {
-        IMAGE_NAME = "lingala89/market-app"
-        IMAGE_TAG = "latest"
-    }
 
     stages {
 
-        stage('Checkout') {
+        stage('Check Docker') {
             steps {
-                checkout scm
+                bat '''
+                docker --version
+                docker info
+                docker ps
+                '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 bat '''
-                docker build -t %IMAGE_NAME%:%IMAGE_TAG% .
+                docker build -t market-app:test .
                 '''
             }
         }
 
-        stage('Docker Login') {
-
+        stage('List Images') {
             steps {
-
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub',
-                        usernameVariable: 'DOCKER_USERNAME',
-                        passwordVariable: 'DOCKER_PASSWORD'
-                    )
-                ]) {
-
-                    bat '''
-                    @echo off
-                    echo Logging into Docker Hub...
-                    echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
-                    '''
-
-                }
-
-            }
-
-        }
-
-        stage('Push Docker Image') {
-
-            steps {
-
                 bat '''
-                docker push %IMAGE_NAME%:%IMAGE_TAG%
+                docker images
                 '''
-
             }
-
         }
 
     }
 
     post {
-
         success {
-
-            echo 'SUCCESS'
-            bat 'docker logout'
-
+            echo 'Docker is working correctly.'
         }
-
         failure {
-
-            echo 'FAILED'
-            bat 'docker logout'
-
+            echo 'Docker test failed.'
         }
-
     }
-
 }
