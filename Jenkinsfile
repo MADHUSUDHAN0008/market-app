@@ -1,9 +1,9 @@
 pipeline {
-
     agent any
 
     environment {
-        IMAGE = "lingala89/market-app"
+        IMAGE_NAME = "lingala89/market-app"
+        IMAGE_TAG = "latest"
     }
 
     stages {
@@ -16,45 +16,38 @@ pipeline {
 
         stage('Build Image') {
             steps {
-                sh 'docker build -t market-app .'
+                bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% .'
             }
         }
 
         stage('Docker Login') {
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub',
-                        usernameVariable: 'USER',
-                        passwordVariable: 'PASS'
-                    )
-                ]) {
-                    sh '''
-                    echo $PASS | docker login -u $USER --password-stdin
-                    '''
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub',
+                    usernameVariable: 'DOCKER_USERNAME',
+                    passwordVariable: 'DOCKER_PASSWORD'
+                )]) {
+                    bat 'echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin'
                 }
-            }
-        }
-
-        stage('Tag Image') {
-            steps {
-                sh 'docker tag market-app $IMAGE:latest'
             }
         }
 
         stage('Push Image') {
             steps {
-                sh 'docker push $IMAGE:latest'
+                bat 'docker push %IMAGE_NAME%:%IMAGE_TAG%'
             }
         }
     }
 
     post {
         success {
-            echo 'Docker image pushed successfully!'
+            echo 'Docker image built and pushed successfully.'
         }
         failure {
             echo 'Pipeline failed.'
+        }
+        always {
+            bat 'docker logout'
         }
     }
 }
