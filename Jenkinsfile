@@ -1,4 +1,5 @@
 pipeline {
+
     agent any
 
     environment {
@@ -14,40 +15,68 @@ pipeline {
             }
         }
 
-        stage('Build Image') {
+        stage('Build Docker Image') {
             steps {
-                bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% .'
+                bat '''
+                docker build -t %IMAGE_NAME%:%IMAGE_TAG% .
+                '''
             }
         }
 
         stage('Docker Login') {
+
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub',
-                    usernameVariable: 'DOCKER_USERNAME',
-                    passwordVariable: 'DOCKER_PASSWORD'
-                )]) {
-                    bat 'echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin'
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
+                ]) {
+
+                    bat '''
+                    @echo off
+                    echo Logging into Docker Hub...
+                    echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
+                    '''
+
                 }
+
             }
+
         }
 
-        stage('Push Image') {
+        stage('Push Docker Image') {
+
             steps {
-                bat 'docker push %IMAGE_NAME%:%IMAGE_TAG%'
+
+                bat '''
+                docker push %IMAGE_NAME%:%IMAGE_TAG%
+                '''
+
             }
+
         }
+
     }
 
     post {
+
         success {
-            echo 'Docker image built and pushed successfully.'
-        }
-        failure {
-            echo 'Pipeline failed.'
-        }
-        always {
+
+            echo 'SUCCESS'
             bat 'docker logout'
+
         }
+
+        failure {
+
+            echo 'FAILED'
+            bat 'docker logout'
+
+        }
+
     }
+
 }
